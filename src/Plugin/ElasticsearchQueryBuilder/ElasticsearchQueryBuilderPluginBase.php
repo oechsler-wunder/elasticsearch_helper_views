@@ -38,7 +38,10 @@ abstract class ElasticsearchQueryBuilderPluginBase extends PluginBase implements
     $values = [];
     /** @var \Drupal\views\Plugin\views\filter\FilterPluginBase $filter */
     foreach ($view->filter as $filter) {
-      $values[$filter->realField] = $filter->value;
+      $values[$filter->realField] = [
+        'value' => $filter->value,
+        'options' => $filter->options
+      ];
     }
     return $values;
   }
