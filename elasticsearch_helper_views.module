@@ -44,6 +44,14 @@ function elasticsearch_helper_views_views_data() {
     'query_id' => 'elasticsearch_query',
   ];
 
+  $data['elasticsearch_result']['eshv_sourcefield'] = [
+    'title' => t('Elasticsearch source field'),
+    'help' => t('A plain value from the elasticsearch result.'),
+    'field' => [
+      'id' => 'eshv_sourcefield',
+    ],
+  ];
+
   $data['elasticsearch_result']['rendered_entity'] = [
     'field' => [
       'title' => t('Rendered entity'),
@@ -59,7 +67,6 @@ function elasticsearch_helper_views_views_data() {
       'id' => 'eshv_fulltext',
     ],
   ];
-
 
   return $data;
 }
