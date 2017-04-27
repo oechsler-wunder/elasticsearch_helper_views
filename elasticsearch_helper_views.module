@@ -52,11 +52,11 @@ function elasticsearch_helper_views_views_data() {
     ],
   ];
 
-  $data['elasticsearch_result']['multimatch'] = [
-   'title' => t('Multimatch filter'),
+  $data['elasticsearch_result']['eshv_fulltext'] = [
+   'title' => t('Fulltext filter'),
     'help' => t('Filter to make fulltext searches against multiple fields.'),
     'filter' => [
-      'id' => 'multimatch',
+      'id' => 'eshv_fulltext',
     ],
   ];
 

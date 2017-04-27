@@ -15,7 +15,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @ViewsFilter("eshv_fulltext")
  */
-class FullTextFilter extends FilterPluginBase {
+class FulltextFilter extends FilterPluginBase {
 
   public function __construct(array $configuration, $plugin_id, $plugin_definition, ElasticsearchIndexManager $elasticsearchHelperPluginManager) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
