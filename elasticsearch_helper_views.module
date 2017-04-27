@@ -52,6 +52,14 @@ function elasticsearch_helper_views_views_data() {
     ],
   ];
 
+  $data['elasticsearch_result']['eshv_highlights'] = [
+   'title' => t('Highlights from search results'),
+    'help' => t('Display highlights from the search result.'),
+    'field' => [
+      'id' => 'eshv_highlights',
+    ],
+  ];
+
   $data['elasticsearch_result']['rendered_entity'] = [
     'field' => [
       'title' => t('Rendered entity'),
