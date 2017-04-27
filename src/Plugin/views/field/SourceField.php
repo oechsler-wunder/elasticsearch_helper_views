@@ -17,7 +17,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Cache\Cache;
 
 /**
- * Provides a field handler which renders an entity in a certain view mode.
+ * Renders a plain value from the elasticsearch result.
  *
  * @ingroup views_field_handlers
  *
