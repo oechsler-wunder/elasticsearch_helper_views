@@ -9,13 +9,13 @@ use Drupal\elasticsearch_helper\Plugin\ElasticsearchIndexManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Filter to make fulltext searches against multiple fields.
+ * Filter to configure fulltext searches against multiple fields.
  *
  * @ingroup views_field_handlers
  *
- * @ViewsFilter("multimatch")
+ * @ViewsFilter("eshv_fulltext")
  */
-class MultiMatch extends FilterPluginBase {
+class FullTextFilter extends FilterPluginBase {
 
   public function __construct(array $configuration, $plugin_id, $plugin_definition, ElasticsearchIndexManager $elasticsearchHelperPluginManager) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
