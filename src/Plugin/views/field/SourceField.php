@@ -43,6 +43,10 @@ class SourceField extends FieldPluginBase implements CacheableDependencyInterfac
     ];
   }
 
+  public function adminLabel($short = FALSE) {
+     return parent::adminLabel() . " (" . $this->options['source_field'] . ")";
+  }
+
   /**
    * {@inheritdoc}
    */
