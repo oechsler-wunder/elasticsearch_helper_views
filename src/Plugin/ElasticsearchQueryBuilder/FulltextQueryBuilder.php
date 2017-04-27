@@ -45,6 +45,15 @@ class FulltextQueryBuilder extends ElasticsearchQueryBuilderPluginBase implement
     return [
       "index" => "_all",
       "body" => [
+        "min_score" => 0.5,
+        "highlight" => [
+          "fragment_size"  => 150,
+          "number_of_fragments"  => 3,
+          "order"  => "score",
+          "fields" => [
+            "*" => ((object) null),
+          ]
+        ],
         "query" => [
           "dis_max" => [
             "queries" => $dis_max_queries,
