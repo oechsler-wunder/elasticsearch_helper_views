@@ -3,16 +3,14 @@
 namespace Drupal\elasticsearch_helper_views\Plugin\views\field;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
-use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\Core\Entity\ContentEntityTypeInterface;
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\views\Entity\Render\EntityTranslationRenderTrait;
 use Drupal\views\Plugin\views\field\FieldPluginBase;
 use Drupal\views\ResultRow;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Cache\Cache;
 
 /**
@@ -29,12 +27,6 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
   /** @var \Drupal\Core\Entity\EntityManagerInterface $entityManager */
   protected $entityManager;
 
-  /** @var \Drupal\Core\Language\LanguageManagerInterface $languageManager */
-  protected $languageManager;
-
-  /** @var EntityDisplayRepositoryInterface $entityDisplayRepository */
-  protected $entityDisplayRepository;
-
   /**
    * RenderedEntity constructor.
    *
@@ -42,15 +34,11 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
    * @param string $plugin_id
    * @param array $plugin_definition
    * @param \Drupal\Core\Entity\EntityManagerInterface $entity_manager
-   * @param \Drupal\Core\Language\LanguageManagerInterface $language_manager
    * @param \Drupal\Core\Entity\EntityDisplayRepositoryInterface $entity_display_repository
    */
-  public function __construct(array $configuration, $plugin_id, array $plugin_definition, EntityManagerInterface $entity_manager, LanguageManagerInterface $language_manager, EntityDisplayRepositoryInterface $entity_display_repository) {
+  public function __construct(array $configuration, $plugin_id, array $plugin_definition, EntityManagerInterface $entity_manager) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-
     $this->entityManager = $entity_manager;
-    $this->languageManager = $language_manager;
-    $this->entityDisplayRepository = $entity_display_repository;
   }
 
   /**
@@ -68,23 +56,6 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
   }
 
   /**
-   * Returns a list of content entity types.
-   *
-   * @return array
-   */
-  protected function getContentEntityTypes() {
-    $entity_types = [];
-    foreach ($this->entityManager->getDefinitions() as $entity_type) {
-      // Filter out content entity types.
-      if ($entity_type instanceof ContentEntityTypeInterface) {
-        $entity_types[$entity_type->id()] = $entity_type->getLabel();
-      }
-    }
-
-    return $entity_types;
-  }
-
-  /**
    * {@inheritdoc}
    */
   public function usesGroupBy() {
@@ -96,10 +67,8 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
    */
   public function defineOptions() {
     $options = parent::defineOptions();
-    foreach ($this->getContentEntityTypes() as $entity_type_id => $entity_type_label) {
-      $options['view_mode']['default'][$entity_type_id] = 'default';
-    }
-
+    $options['settings']['default'] = '';
+    $options['entity-store']['default'] = 'entity-store-' . uniqid();
     return $options;
   }
 
@@ -109,21 +78,42 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
   public function buildOptionsForm(&$form, FormStateInterface $form_state) {
     parent::buildOptionsForm($form, $form_state);
 
-    // Prepare entity type listing.
-    foreach ($this->getContentEntityTypes() as $entity_type_id => $entity_type_label) {
-      $form['view_mode'][$entity_type_id] = [
-        '#type' => 'select',
-        '#options' => $this->entityDisplayRepository->getViewModeOptions($entity_type_id),
-        '#title' => $this->t('View mode for @content_type', ['@content_type' => $entity_type_label]),
-        '#default_value' => $this->options['view_mode'][$entity_type_id],
-      ];
+    $form['settings'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t("Settings"),
+      '#default_value' => Yaml::encode($this->options['settings']),
+      '#description' => $this->t('Provide YAML settings mapping entity/bundle: '
+        ),
+    ];
+  }
+
+    public function validateOptionsForm(&$form, FormStateInterface $form_state) {
+    parent::validateOptionsForm($form, $form_state);
+    $value = &$form_state->getValue(['options','settings']);
+
+    if (empty($value)) {
+      $value = '';
     }
+    try {
+      Yaml::decode($value);
+    } catch (\Exception $e) {
+      $form_state->setError(['options','settings'], $this->t('Please enter valid JSON'));
+    }
+  }
+
+  public function submitOptionsForm(&$form, FormStateInterface $form_state) {
+    $value = Yaml::decode($form_state->getValue(['options','settings']));
+    $form_state->setValue(['options','settings'], $value);
+    parent::submitOptionsForm($form, $form_state);
   }
 
   /**
    * {@inheritdoc}
    */
   public function render(ResultRow $values) {
+
+    return ['#markup' => 'foo'];
+    /*
     $build = [];
     $entity = $this->getEntity($values);
 
@@ -140,7 +130,7 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
         }
       }
     }
-
+    */
     return $build;
   }
 
@@ -179,6 +169,9 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
    * {@inheritdoc}
    */
   public function query() {
+    $this->view->build_info['load_entities'] = [
+      $this->options['entity-store'] => $this->options['settings'],
+    ];
   }
 
   /**
