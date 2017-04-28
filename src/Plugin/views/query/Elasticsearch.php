@@ -2,6 +2,7 @@
 
 namespace Drupal\elasticsearch_helper_views\Plugin\views\query;
 
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
@@ -199,8 +200,9 @@ class Elasticsearch extends QueryPluginBase {
     $view->pager->updatePageInfo();
     $view->total_rows = $view->pager->getTotalItems();
 
-    // Load all entities contained in the results.
-    $this->loadEntities($result);
+    if (isset($view->build_info['load_entities'])){
+      $this->loadEntities($result, $view->build_info['load_entities']);
+    }
   }
 
   /**
@@ -230,65 +232,51 @@ class Elasticsearch extends QueryPluginBase {
   }
 
   /**
-   * Loads all entities contained in the passed-in $results.
-   *.
-   * If the entity belongs to the base table, then it gets stored in
-   * $result->_entity. Otherwise, it gets stored in
-   * $result->_relationship_entities[$relationship_id];
-   *
-   * @param \Drupal\views\ResultRow[] $results
-   *   The result of the SQL query.
+   * ...
    */
-  public function loadEntities(&$results) {
-    $entity_types = array_keys($this->entityTypeManager->getDefinitions());
+  public function loadEntities(&$results, $fields_settings) {
     $entity_ids_by_type = [];
 
     foreach ($results as $index => $result) {
-      // Store entity ID if found.
-      if (!empty($result->entity_type) && in_array($result->entity_type, $entity_types)) {
-        $entity_ids_by_type[$result->entity_type][$index] = $result->id;
+      // Iterate over all the relevant setting.
+      foreach ($fields_settings as $entity_store_id => $field_settings) {
+        $result->_entity_pointer[$entity_store_id] = [];
+        // $field_settings may have multiple parts.
+        foreach ($field_settings as $setting_parts) {
+          // Evaluate the parts in order. Finish on the first setting which matches.
+          foreach ($setting_parts as $setting) {
+            if (isset($setting['entity_type'])) {
+                $entity_type = $setting['entity_type'];
+            }
+            else {
+              $entity_type = NestedArray::getValue($result->_source, array_map('trim', explode('][', $setting['entity_type_key'])));
+            }
+            if (isset($setting['entity_id_key'])) {
+              $entity_id = NestedArray::getValue($result->_source, array_map('trim', explode('][', $setting['entity_id_key'])));
+            }
+            if (!empty($entity_type) && !empty($entity_id)) {
+              $result->_entity_pointer[$entity_store_id][] = [$entity_type, $entity_id];
+              $entity_ids_by_type[$entity_type][$entity_id] = $entity_id;
+              continue 2;
+            }
+          }
+        }
       }
     }
 
-    // Load all entities and assign them to the correct result row.
+    // Load all entities
     foreach ($entity_ids_by_type as $entity_type => $ids) {
-      $entity_storage = $this->entityTypeManager->getStorage($entity_type);
-      $flat_ids = iterator_to_array(new \RecursiveIteratorIterator(new \RecursiveArrayIterator($ids)), FALSE);
-
-      $entities = $entity_storage->loadMultiple(array_unique($flat_ids));
-      $results = $this->assignEntitiesToResult($ids, $entities, $results);
-    }
-  }
-
-  /**
-   * Sets entities onto the view result row objects.
-   *
-   * This method takes into account the relationship in which the entity was
-   * needed in the first place.
-   *
-   * @param mixed[] $ids
-   *   An array of identifiers (entity ID / revision ID).
-   * @param \Drupal\Core\Entity\EntityInterface[] $entities
-   *   An array of entities keyed by their identified (entity ID / revision ID).
-   * @param \Drupal\views\ResultRow[] $results
-   *   The entire views result.
-   *
-   * @return \Drupal\views\ResultRow[]
-   *   The changed views results.
-   */
-  protected function assignEntitiesToResult($ids, array $entities, array $results) {
-    foreach ($ids as $index => $id) {
-      if (isset($entities[$id])) {
-        $entity = $entities[$id];
-      }
-      else {
-        $entity = NULL;
-      }
-
-      $results[$index]->_entity = $entity;
+      $entities[$entity_type] = $this->entityTypeManager->getStorage($entity_type)->loadMultiple($ids);
     }
 
-    return $results;
+    foreach ($results as $index => $result) {
+      foreach ($result->_entity_pointer as $entity_store_id => $entity_pointers) {
+        foreach ($entity_pointers as $entity_pointer) {
+          list($entity_type, $entity_id) = $entity_pointer;
+          $result->$entity_store_id[] = $entities[$entity_type][$entity_id];
+        }
+      }
+    }
   }
 
   /**
