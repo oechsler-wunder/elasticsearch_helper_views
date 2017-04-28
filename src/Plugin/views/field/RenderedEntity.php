@@ -117,26 +117,28 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
     $build = [];
     $entities = $values->$entity_store_id;
 
-    //TODO! deal with multiple entities!
-    $entity = array_pop($entities);
-
-    // Elasticsearch results might not correspond to a Drupal entity.
-    if ($entity instanceof ContentEntityInterface) {
-      $entity = $this->getEntityTranslation($entity, $values);
-      if (isset($entity)) {
-        $access = $entity->access('view', NULL, TRUE);
-        $build['#access'] = $access;
-        if ($access->isAllowed()) {
-          $entity_type = $entity->getEntityTypeId();
-          $entity_bundle = $entity->bundle();
-          $mode_mode = $this->pick_view_mode($entity_type, $entity_bundle);
-          $view_builder = $this->entityManager->getViewBuilder($entity_type);
-          $build += $view_builder->view($entity, $mode_mode);
+    $builds = [];
+    foreach ($entities as $entity) {
+      $build = [];
+      // Elasticsearch results might not correspond to a Drupal entity.
+      if ($entity instanceof ContentEntityInterface) {
+        $entity = $this->getEntityTranslation($entity, $values);
+        if (isset($entity)) {
+          $access = $entity->access('view', NULL, TRUE);
+          $build['#access'] = $access;
+          if ($access->isAllowed()) {
+            $entity_type = $entity->getEntityTypeId();
+            $entity_bundle = $entity->bundle();
+            $mode_mode = $this->pick_view_mode($entity_type, $entity_bundle);
+            $view_builder = $this->entityManager->getViewBuilder($entity_type);
+            $build += $view_builder->view($entity, $mode_mode);
+          }
         }
       }
+      $builds[] = $build;
     }
 
-    return $build;
+    return $builds;
   }
 
   protected function pick_view_mode($type, $bundle) {
