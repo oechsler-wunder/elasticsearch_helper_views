@@ -242,23 +242,20 @@ class Elasticsearch extends QueryPluginBase {
       foreach ($fields_settings as $entity_store_id => $field_settings) {
         $result->_entity_pointer[$entity_store_id] = [];
         // $field_settings may have multiple parts.
-        foreach ($field_settings as $setting_parts) {
-          // Evaluate the parts in order. Finish on the first setting which matches.
-          foreach ($setting_parts as $setting) {
-            if (isset($setting['entity_type'])) {
-                $entity_type = $setting['entity_type'];
-            }
-            else {
-              $entity_type = NestedArray::getValue($result->_source, array_map('trim', explode('][', $setting['entity_type_key'])));
-            }
-            if (isset($setting['entity_id_key'])) {
-              $entity_id = NestedArray::getValue($result->_source, array_map('trim', explode('][', $setting['entity_id_key'])));
-            }
-            if (!empty($entity_type) && !empty($entity_id)) {
-              $result->_entity_pointer[$entity_store_id][] = [$entity_type, $entity_id];
-              $entity_ids_by_type[$entity_type][$entity_id] = $entity_id;
-              continue 2;
-            }
+        foreach ($field_settings as $setting) {
+          if (isset($setting['entity_type'])) {
+              $entity_type = $setting['entity_type'];
+          }
+          else {
+            $entity_type = NestedArray::getValue($result->_source, array_map('trim', explode('][', $setting['entity_type_key'])));
+          }
+          if (isset($setting['entity_id_key'])) {
+            $entity_id = NestedArray::getValue($result->_source, array_map('trim', explode('][', $setting['entity_id_key'])));
+          }
+          if (!empty($entity_type) && !empty($entity_id)) {
+            $result->_entity_pointer[$entity_store_id][] = [$entity_type, $entity_id];
+            $entity_ids_by_type[$entity_type][$entity_id] = $entity_id;
+            continue 2;
           }
         }
       }

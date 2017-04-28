@@ -2,16 +2,16 @@
 
 namespace Drupal\elasticsearch_helper_views\Plugin\views\field;
 
+use Drupal\Component\Serialization\Yaml;
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableDependencyInterface;
-use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\views\Entity\Render\EntityTranslationRenderTrait;
 use Drupal\views\Plugin\views\field\FieldPluginBase;
 use Drupal\views\ResultRow;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Component\Serialization\Yaml;
-use Drupal\Core\Cache\Cache;
 
 /**
  * Provides a field handler which renders an entity in a certain view mode.
@@ -111,11 +111,14 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
    * {@inheritdoc}
    */
   public function render(ResultRow $values) {
+    #dpm($values);
+    $entity_store_id = $this->options['entity-store'];
 
-    return ['#markup' => 'foo'];
-    /*
     $build = [];
-    $entity = $this->getEntity($values);
+    $entities = $values->$entity_store_id;
+
+    //TODO! deal with multiple entities!
+    $entity = array_pop($entities);
 
     // Elasticsearch results might not correspond to a Drupal entity.
     if ($entity instanceof ContentEntityInterface) {
@@ -124,14 +127,27 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
         $access = $entity->access('view', NULL, TRUE);
         $build['#access'] = $access;
         if ($access->isAllowed()) {
-          $mode_mode = $this->options['view_mode'][$this->getEntityTypeId()];
-          $view_builder = $this->entityManager->getViewBuilder($this->getEntityTypeId());
+          $entity_type = $entity->getEntityTypeId();
+          $entity_bundle = $entity->bundle();
+          $mode_mode = $this->pick_view_mode($entity_type, $entity_bundle);
+          $view_builder = $this->entityManager->getViewBuilder($entity_type);
           $build += $view_builder->view($entity, $mode_mode);
         }
       }
     }
-    */
+
     return $build;
+  }
+
+  protected function pick_view_mode($type, $bundle) {
+    $settings = $this->options['settings'];
+    if (isset($settings["$type:$bundle"]['view_mode'])) {
+      return $settings["$type:$bundle"]['view_mode'];
+    }
+    if (isset($settings["$type"]['view_mode'])) {
+      return $settings["$type"]['view_mode'];
+    }
+    return 'default';
   }
 
   /**
