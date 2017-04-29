@@ -111,10 +111,7 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
    * {@inheritdoc}
    */
   public function render(ResultRow $values) {
-    #dpm($values);
     $entity_store_id = $this->options['entity-store'];
-
-    $build = [];
     $entities = $values->$entity_store_id;
 
     $builds = [];
@@ -129,9 +126,9 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
           if ($access->isAllowed()) {
             $entity_type = $entity->getEntityTypeId();
             $entity_bundle = $entity->bundle();
-            $mode_mode = $this->pick_view_mode($entity_type, $entity_bundle);
+            $view_mode = $this->pickViewmode($entity_type, $entity_bundle);
             $view_builder = $this->entityManager->getViewBuilder($entity_type);
-            $build += $view_builder->view($entity, $mode_mode);
+            $build += $view_builder->view($entity, $view_builder);
           }
         }
       }
@@ -141,7 +138,7 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
     return $builds;
   }
 
-  protected function pick_view_mode($type, $bundle) {
+  protected function pickViewmode($type, $bundle) {
     $settings = $this->options['settings'];
     if (isset($settings["$type:$bundle"]['view_mode'])) {
       return $settings["$type:$bundle"]['view_mode'];
