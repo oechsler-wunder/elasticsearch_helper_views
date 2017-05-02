@@ -4,12 +4,11 @@ namespace Drupal\elasticsearch_helper_views\Plugin\views\field;
 
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Cache\Cache;
-use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\elasticsearch_helper\Plugin\ElasticsearchIndexManagerInterface;
 use Drupal\views\Entity\Render\EntityTranslationRenderTrait;
-use Drupal\views\Plugin\views\field\FieldPluginBase;
 use Drupal\views\ResultRow;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -20,7 +19,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @ViewsField("elasticsearch_rendered_entity")
  */
-class RenderedEntity extends FieldPluginBase implements CacheableDependencyInterface {
+class RenderedEntity extends ElasticsearchHelperViewsFieldPluginBase {
 
   use EntityTranslationRenderTrait;
 
@@ -36,8 +35,8 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
    * @param \Drupal\Core\Entity\EntityManagerInterface $entity_manager
    * @param \Drupal\Core\Entity\EntityDisplayRepositoryInterface $entity_display_repository
    */
-  public function __construct(array $configuration, $plugin_id, array $plugin_definition, EntityManagerInterface $entity_manager) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition);
+  public function __construct(array $configuration, $plugin_id, array $plugin_definition, ElasticsearchIndexManagerInterface $elasticsearchHelperPluginManager, EntityManagerInterface $entity_manager) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition, $elasticsearchHelperPluginManager);
     $this->entityManager = $entity_manager;
   }
 
@@ -49,9 +48,8 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('entity.manager'),
-      $container->get('language_manager'),
-      $container->get('entity_display.repository')
+      $container->get('plugin.manager.elasticsearch_index.processor'),
+      $container->get('entity.manager')
     );
   }
 
@@ -110,16 +108,13 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
   /**
    * {@inheritdoc}
    */
-  public function render(ResultRow $values) {
-    $entity_store_id = $this->options['entity-store'];
-    $entities = $values->$entity_store_id;
-
-    $builds = [];
-    foreach ($entities as $entity) {
+  public function render(ResultRow $row) {
+  $builds = [];
+    foreach ($row->{$this->options['entity-store']} as $entity) {
       $build = [];
       // Elasticsearch results might not correspond to a Drupal entity.
       if ($entity instanceof ContentEntityInterface) {
-        $entity = $this->getEntityTranslation($entity, $values);
+        $entity = $this->getEntityTranslation($entity, $row);
         if (isset($entity)) {
           $access = $entity->access('view', NULL, TRUE);
           $build['#access'] = $access;
@@ -128,13 +123,13 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
             $entity_bundle = $entity->bundle();
             $view_mode = $this->pickViewmode($entity_type, $entity_bundle);
             $view_builder = $this->entityManager->getViewBuilder($entity_type);
-            $build += $view_builder->view($entity, $view_builder);
+            $build += $view_builder->view($entity, $view_mode);
           }
         }
       }
       $builds[] = $build;
     }
-
+dpm($builds);
     return $builds;
   }
 
@@ -152,13 +147,6 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
   /**
    * {@inheritdoc}
    */
-  public function getCacheContexts() {
-    return [];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function getCacheTags() {
     $view_display_storage = $this->entityManager->getStorage('entity_view_display');
     $view_displays = $view_display_storage->loadMultiple($view_display_storage
@@ -171,13 +159,6 @@ class RenderedEntity extends FieldPluginBase implements CacheableDependencyInter
       $tags = array_merge($tags, $view_display->getCacheTags());
     }
     return $tags;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getCacheMaxAge() {
-    return Cache::PERMANENT;
   }
 
   /**

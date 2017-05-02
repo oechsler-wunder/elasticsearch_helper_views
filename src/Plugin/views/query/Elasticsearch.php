@@ -247,14 +247,23 @@ class Elasticsearch extends QueryPluginBase {
               $entity_type = $setting['entity_type'];
           }
           else {
-            $entity_type = NestedArray::getValue($result->_source, array_map('trim', explode('][', $setting['entity_type_key'])));
+                         // Nah! This has to go into a util class ...
+            list($entity_type, $cardinality) = \Drupal\elasticsearch_helper_views\Plugin\views\field\ElasticsearchHelperViewsFieldPluginBase::getNestedValue($result->_source, $setting['entity_type_key']);
+            if ($cardinality != 'single') {
+              throw new Exception($this->t("Entity type has to be a single value. No * allowed in %conf", ["%conf" => $setting['entity_type_key']]));
+            }
           }
           if (isset($setting['entity_id_key'])) {
-            $entity_id = NestedArray::getValue($result->_source, array_map('trim', explode('][', $setting['entity_id_key'])));
+            list($entity_ids, $cardinality) = \Drupal\elasticsearch_helper_views\Plugin\views\field\ElasticsearchHelperViewsFieldPluginBase::getNestedValue($result->_source, $setting['entity_id_key']);
+            if ($cardinality == 'single') {
+              $entity_ids = [$entity_ids];
+            }
           }
-          if (!empty($entity_type) && !empty($entity_id)) {
-            $result->_entity_pointer[$entity_store_id][] = [$entity_type, $entity_id];
-            $entity_ids_by_type[$entity_type][$entity_id] = $entity_id;
+          if (!empty($entity_type) && !empty($entity_ids)) {
+            foreach ($entity_ids as $entity_id) {
+              $result->_entity_pointer[$entity_store_id][] = [$entity_type, $entity_id];
+              $entity_ids_by_type[$entity_type][$entity_id] = $entity_id;
+            }
             continue 2;
           }
         }

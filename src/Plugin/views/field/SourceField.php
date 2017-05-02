@@ -3,9 +3,7 @@
 namespace Drupal\elasticsearch_helper_views\Plugin\views\field;
 
 use Drupal\Component\Utility\NestedArray;
-use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\views\Plugin\views\field\FieldPluginBase;
 use Drupal\views\ResultRow;
 use Drupal\Core\Cache\Cache;
 
@@ -16,7 +14,7 @@ use Drupal\Core\Cache\Cache;
  *
  * @ViewsField("eshv_sourcefield")
  */
-class SourceField extends FieldPluginBase implements CacheableDependencyInterface {
+class SourceField extends ElasticsearchHelperViewsFieldPluginBase {
 
 
   /**
@@ -50,37 +48,17 @@ class SourceField extends FieldPluginBase implements CacheableDependencyInterfac
   /**
    * {@inheritdoc}
    */
-  public function render(ResultRow $values) {
+  public function render(ResultRow $row) {
     $source_field = $this->options['source_field'];
-    $value = NestedArray::getValue($values->_source, array_map('trim', explode('][', $source_field)));
-    $build = ['#markup' => $value];
-    return $build;
-  }
 
-  /**
-   * {@inheritdoc}
-   */
-  public function getCacheContexts() {
-    return [];
-  }
+    list($value, $cardinality) = $this->getNestedValue($row->_source, $source_field);
 
-  /**
-   * {@inheritdoc}
-   */
-  public function getCacheTags() {
-    return [];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getCacheMaxAge() {
-    return Cache::PERMANENT;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function query() {
+    if ($cardinality == 'single') {
+      $build = $value;
+      return $build;
+    }
+    else {
+      return implode(", ", $value);
+    }
   }
 }
