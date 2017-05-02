@@ -129,7 +129,6 @@ class RenderedEntity extends ElasticsearchHelperViewsFieldPluginBase {
       }
       $builds[] = $build;
     }
-dpm($builds);
     return $builds;
   }
 
