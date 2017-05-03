@@ -4,9 +4,11 @@ namespace Drupal\elasticsearch_helper_views\Plugin\ElasticsearchQueryBuilder;
 
 use Drupal\Component\Plugin\PluginBase;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\elasticsearch_helper_views\ElasticsearchQueryBuilderInterface;
 use Drupal\views\ViewExecutable;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+
 
 /**
  * Base class for Elasticsearch index plugins.
@@ -17,6 +19,7 @@ abstract class ElasticsearchQueryBuilderPluginBase extends PluginBase implements
    * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition) {
+    $this->options = $configuration;
     parent::__construct($configuration, $plugin_id, $plugin_definition);
   }
 
@@ -70,4 +73,15 @@ abstract class ElasticsearchQueryBuilderPluginBase extends PluginBase implements
     return $arguments;
   }
 
+  /**
+   * Allow additional options for this query builder.
+   *
+   * Add form elements to the container element called like the plugin id.
+   */
+  public function buildOptionsForm(&$form, FormStateInterface $form_state) {
+    $form[$this->pluginId] = [
+      '#type' => 'container',
+      '#states' => ['visible' => [':input[name="query[options][elasticserach_query_builder]"]' => ['value' => $this->pluginId ]]],
+    ];
+  }
 }

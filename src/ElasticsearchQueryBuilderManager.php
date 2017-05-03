@@ -17,5 +17,4 @@ class ElasticsearchQueryBuilderManager extends DefaultPluginManager {
     $this->alterInfo('elasticsearch_helper_views_elasticsearch_query_builder_info');
     $this->setCacheBackend($cache_backend, 'elasticsearch_helper_views_elasticsearch_query_builder_plugins');
   }
-
 }

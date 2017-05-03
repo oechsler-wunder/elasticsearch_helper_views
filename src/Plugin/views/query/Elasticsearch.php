@@ -87,8 +87,8 @@ class Elasticsearch extends QueryPluginBase {
     $query_builder_options = [];
     foreach ($this->elasticsearchQueryBuilderManager->getDefinitions() as $query_builder_plugin) {
       $query_builder_options[$query_builder_plugin['id']] = sprintf('%s (%s)', $query_builder_plugin['label'], $query_builder_plugin['id']);
+      $instances[$query_builder_plugin['id']] = $this->elasticsearchQueryBuilderManager->createInstance($query_builder_plugin['id']);
     }
-
     $form['elasticserach_query_builder'] = array(
       '#type' => 'select',
       '#title' => $this->t('Elasticsearch query builder'),
@@ -97,6 +97,12 @@ class Elasticsearch extends QueryPluginBase {
       '#default_value' => $this->options['elasticserach_query_builder'],
       '#required' => FALSE,
     );
+    $form['#attached']['library'][] = ['system', 'drupal.states'];
+
+    foreach ($instances as $plugin) {
+      $plugin->options = $this->options[$plugin->pluginId];
+      $plugin->buildOptionsForm($form, $form_state);
+    }
   }
 
   /**
@@ -161,7 +167,7 @@ class Elasticsearch extends QueryPluginBase {
    */
   public function query($get_count = FALSE) {
     /** @var ElasticsearchQueryBuilderInterface $query_builder */
-    $query_builder = $this->elasticsearchQueryBuilderManager->createInstance($this->options['elasticserach_query_builder']);
+    $query_builder = $this->elasticsearchQueryBuilderManager->createInstance($this->options['elasticserach_query_builder'], $this->options[$this->options['elasticserach_query_builder']]);
     $query = $query_builder->buildQuery($this->view);
 
     // Apply limit and offset to the query.

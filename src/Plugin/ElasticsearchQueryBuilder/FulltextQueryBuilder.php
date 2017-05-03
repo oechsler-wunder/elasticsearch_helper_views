@@ -2,9 +2,10 @@
 
 namespace Drupal\elasticsearch_helper_views\Plugin\ElasticsearchQueryBuilder;
 
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\elasticsearch_helper_views\ElasticsearchQueryBuilderInterface;
+use Drupal\elasticsearch_helper_views\Plugin\ElasticsearchQueryBuilder\ElasticsearchQueryBuilderPluginBase;
 use Drupal\views\ViewExecutable;
-use \Drupal\elasticsearch_helper_views\Plugin\ElasticsearchQueryBuilder\ElasticsearchQueryBuilderPluginBase;
 
 /**
  * Fulltext search query builder.
@@ -16,7 +17,6 @@ use \Drupal\elasticsearch_helper_views\Plugin\ElasticsearchQueryBuilder\Elastics
  * )
  */
 class FulltextQueryBuilder extends ElasticsearchQueryBuilderPluginBase implements ElasticsearchQueryBuilderInterface {
-
   /**
    * {@inheritdoc}
    */
@@ -45,7 +45,7 @@ class FulltextQueryBuilder extends ElasticsearchQueryBuilderPluginBase implement
     return [
       "index" => "_all",
       "body" => [
-        "min_score" => 0.5,
+        "min_score" => isset($this->options['min_score'])?$this->options['min_score']:'0',
         "highlight" => [
           "fragment_size"  => 150,
           "number_of_fragments"  => 3,
@@ -61,6 +61,18 @@ class FulltextQueryBuilder extends ElasticsearchQueryBuilderPluginBase implement
         ]
       ]
     ];
+  }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function buildOptionsForm(&$form, FormStateInterface $form_state) {
+    parent::buildOptionsForm($form, $form_state);
+    $form[$this->pluginId]['min_score'] = [
+      '#type' => 'textfield',
+      '#title' => "Minimal score",
+      '#default_value' => $this->options['min_score'],
+      '#description' => 'Sets min_score attribute of the query.',
+    ];
   }
 }
